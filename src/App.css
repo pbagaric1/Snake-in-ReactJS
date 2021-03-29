@@ -6,24 +6,37 @@
   background: black;
 }
 
+.grid-container {
+  border: solid 3px white;
+  position: relative;
+}
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(15, 30px);
-  grid-template-rows: repeat(15, 30px);
-  border: solid 3px white;
+  grid-template-columns: repeat(20, 30px);
+  grid-template-rows: repeat(20, 30px);
 }
 
 .square {
-  border: solid 2px white;
+  /* border: solid 2px white; */
   background: black;
 }
 
 .snake {
   background: green;
+  border: 0.5px solid white;
 }
 
 .food {
-  background: red;
+  text-align: center;
+}
+
+.emoji {
+  font-size: 23px;
+}
+
+.tractor {
+  max-width: 100%;
 }
 
 h1,
@@ -38,4 +51,34 @@ h3 {
 .asd {
   display: flex;
   flex-direction: column;
+}
+
+.game-over {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-50%);
+  text-align: center;
+}
+
+.play-again {
+  cursor: pointer;
+  color: white;
+}
+
+.difficulty-picker {
+  width: 250px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.difficulty-item {
+  color: white;
+  cursor: pointer;
+  padding: 10px;
+}
+
+.selected {
+  border: 1px solid white;
 }
