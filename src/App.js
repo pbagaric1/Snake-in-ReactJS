@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import "./App.css";
 import { produce } from "immer";
 import tractor from "./tractor.png";
-// import { throttle } from "lodash";
+import apple from "./images.jpg";
 
 const App = () => {
+  //Set directions related to keyboard codes
   const DIRECTIONS = {
     LEFT: 37,
     UP: 38,
@@ -12,27 +13,29 @@ const App = () => {
     DOWN: 40,
   };
 
+  //Difficulty is time for move interval in miliseconds
   const DIFFICULY = {
-    EASY: 200,
-    MEDIUM: 150,
+    NORMAL: 150,
     HARD: 100,
+    BORBAS: 50,
   };
 
   const gridSize = 20;
 
-  const [snakeSpeed, setSnakeSpeed] = useState(DIFFICULY.MEDIUM);
-
+  //Create 20x20 grid with 0 as values and store it in state
   const [grid, setGrid] = useState(
     Array.from(Array(gridSize), () => new Array(gridSize).fill(0))
   );
+
+  const [snakeSpeed, setSnakeSpeed] = useState();
+
+  //Had to use combination of states and refs cause react
   const [headStateX, setHeadX] = useState();
   const [headStateY, setHeadY] = useState();
-
   const headX = useRef();
   const headY = useRef();
 
-  const [gameOver, setGameOver] = useState(false);
-
+  const [isRunning, setIsRunning] = useState(false);
   const currentDirection = useRef(DIRECTIONS.RIGHT);
 
   const [scoreState, setScoreState] = useState(0);
@@ -40,70 +43,69 @@ const App = () => {
 
   const moveInterval = useRef();
 
-  const getInitialPosition = useCallback((g) => {
-    const startPositionX = Math.floor(Math.random() * gridSize);
-    const startPositionY = Math.floor(Math.random() * gridSize);
-    let overlap = false;
-    for (let i = 0; i < gridSize; i++)
-      for (let j = 0; j < gridSize; j++) {
-        if (g[startPositionX][startPositionX] > 0) {
-          overlap = true;
-          return;
-        }
-      }
-    // console.log("hrana", startPositionX, startPositionY);
-    // console.log("g", g);
-    return overlap ? getInitialPosition(g) : { startPositionX, startPositionY };
-  }, []);
-
-  const getRandNum = useCallback((allowed) => {
-    return allowed[Math.floor(Math.random() * allowed.length)];
-    // console.log(excluded);
-    // let num = Math.floor(
-    //   Math.random() * (max - min + 1 - excluded.length) + min
-    // );
-    // excluded
-    //   .sort((a, b) => a - b)
-    //   .every((exeption) => exeption <= num && (num++, true));
-    // return num;
+  //Fn that takes a 2d array and gets a random coordinate from it in [x,y] format
+  const getRandomCoordinates = useCallback((allowedCoordinates) => {
+    return allowedCoordinates[
+      Math.floor(Math.random() * allowedCoordinates.length)
+    ];
   }, []);
 
   const setStartingGrid = useCallback(() => {
     setGrid((g) =>
+      //Produce is function from lib called immer, first argument is current state, second is "draft" state which
+      //is a function where we define what we will do with current state and result is new state based on mutations
+      //to the draft state
       produce(g, (gridCopy) => {
-        for (let i = 0; i < gridSize; i++)
-          for (let j = 0; j < gridSize; j++) {
-            gridCopy[i][j] = 0;
-          }
-
+        //Set snake head position in the middle of the board, but since it have a length of 3, move head one square
+        //to the right so its exactly in the center
         const headPositionX = parseInt(gridSize / 2);
         const headPositionY = parseInt(gridSize / 2 + 1);
+
+        const allowedCoordinatesToSpawnFood = [];
+
+        for (let i = 0; i < gridSize; i++)
+          for (let j = 0; j < gridSize; j++) {
+            //Set all values in grid to 0
+            gridCopy[i][j] = 0;
+
+            //Push all coordinates to allowed coordinates array which is used for generating food, but exclude
+            //starting coordinates of the snake
+            if (
+              !(
+                i === headPositionX &&
+                (j === headPositionY ||
+                  j === headPositionY - 1 ||
+                  j === headPositionY - 2)
+              )
+            )
+              allowedCoordinatesToSpawnFood.push([i, j]);
+          }
+
+        //Set snake values, largest number is always head of the snake
         gridCopy[headPositionX][headPositionY] = 3;
         gridCopy[headPositionX][headPositionY - 1] = 2;
         gridCopy[headPositionX][headPositionY - 2] = 1;
-        const {
-          startPositionX: foodStartX,
-          startPositionY: foodStartY,
-        } = getInitialPosition(g);
+
+        //Get coordinates for starting food
+        const [foodStartX, foodStartY] = getRandomCoordinates(
+          allowedCoordinatesToSpawnFood
+        );
+
+        //Food will always have a value of -1
         gridCopy[foodStartX][foodStartY] = -1;
+
+        //Keep track of snake's head with a state
         setHeadX(headPositionX);
         setHeadY(headPositionY);
       })
     );
-  }, [getInitialPosition]);
+  }, [getRandomCoordinates]);
 
-  // const generateFood = useCallback(() => {
-  //   setGrid((g) =>
-  //     produce(g, (gridCopy) => {
-  //       const {
-  //         startPositionX: foodStartX,
-  //         startPositionY: foodStartY,
-  //       } = getInitialPosition();
-  //       gridCopy[foodStartX][foodStartY] = -1;
-  //     })
-  //   );
-  // }, [getInitialPosition]);
+  useEffect(() => {
+    setStartingGrid();
+  }, [setStartingGrid]);
 
+  //Update refs with state values
   useEffect(() => {
     headX.current = headStateX;
   }, [headStateX]);
@@ -116,6 +118,8 @@ const App = () => {
     score.current = scoreState;
   }, [scoreState]);
 
+  //Get allowed directions related to the current one, for example if current one is
+  //right then we cant move right again or left
   const getAllowedDirections = useCallback(
     (direction) => {
       if (direction === DIRECTIONS.LEFT || direction === DIRECTIONS.RIGHT)
@@ -125,11 +129,13 @@ const App = () => {
     [DIRECTIONS.DOWN, DIRECTIONS.LEFT, DIRECTIONS.RIGHT, DIRECTIONS.UP]
   );
 
+  //Fn that triggers every time we use the keyboard arrows for changing the direction
   const changeDirection = useCallback(
     (event) => {
       if (
         !getAllowedDirections(currentDirection.current).includes(event.keyCode)
       )
+        //If the pressed key is not allowed direction or any other key than the defined ones simply return
         return;
       currentDirection.current = event.keyCode;
     },
@@ -140,52 +146,37 @@ const App = () => {
     window.addEventListener("keydown", changeDirection, false);
   }, [changeDirection]);
 
-  // const subtractByOne = (g) => {
-  //   console.log("prije", g);
-  //   return produce(g, (gridCopy) => {
-  //     for (let i = 0; i < gridSize; i++)
-  //       for (let j = 0; j < gridSize; j++) {
-  //         if (gridCopy[i][j] > 0) gridCopy[i][j] = gridCopy[i][j] - 1;
-  //       }
-  //   });
-  // };
-
-  // const removeTail = (g) => {
-  //   return produce(g, (gridCopy) => {
-  //     for (let i = 0; i < gridSize; i++)
-  //       for (let j = 0; j < gridSize; j++) {
-  //         if (gridCopy[i][j] === 1) gridCopy[i][j] = 0;
-  //       }
-  //   });
-  // };
-
   const eatFood = useCallback(() => {
     setScoreState(score.current + 5);
     setGrid((g) => {
       return produce(g, (gridCopy) => {
-        let allowedPairs = [];
+        let allowedCoordinatesToSpawnFood = [];
         for (let i = 0; i < gridSize; i++)
           for (let j = 0; j < gridSize; j++) {
             if (g[i][j] === 0) {
-              allowedPairs.push([i, j]);
+              allowedCoordinatesToSpawnFood.push([i, j]);
             }
           }
-        // const foodStartX = 5;
-        // const foodStartY = 10;
-        const [foodStartX, foodStartY] = getRandNum(allowedPairs);
+
+        //Generate new food position and place it on the grid
+        const [foodStartX, foodStartY] = getRandomCoordinates(
+          allowedCoordinatesToSpawnFood
+        );
 
         gridCopy[foodStartX][foodStartY] = -1;
 
+        //Increase snake's size by increasing each value in grid thats higher than 0, meaning
+        //that's where snake is
         for (let i = 0; i < gridSize; i++)
           for (let j = 0; j < gridSize; j++) {
             if (g[i][j] > 0) gridCopy[i][j]++;
           }
       });
     });
-  }, [getRandNum]);
+  }, [getRandomCoordinates]);
 
   useEffect(() => {
-    if (gameOver) {
+    if (!isRunning) {
       return;
     }
     moveInterval.current = setInterval(() => {
@@ -196,22 +187,28 @@ const App = () => {
               if (i === headX.current && j === headY.current) {
                 switch (currentDirection.current) {
                   case DIRECTIONS.LEFT:
+                    //If snake hits the wall anounce game over
                     if (g[i][j - 1] > 0 || j - 1 < 0) {
-                      setGameOver(true);
+                      setIsRunning(false);
                       return;
                     }
+                    //Increase next square in the direction snake is moving by the current head value + 1
+                    //meaning that square will become new head
                     gridCopy[i][j - 1] = g[i][j] + 1;
+                    //If the next square in the direction snake is moving has a value of -1 that means
+                    //food is there and eatFood fn is called
                     if (g[i][j - 1] === -1) eatFood();
+                    //Update head state with new head position
                     setHeadX(i);
                     setHeadY(j - 1);
                     break;
                   case DIRECTIONS.UP:
                     if (i - 1 < 0) {
-                      setGameOver(true);
+                      setIsRunning(false);
                       return;
                     }
                     if (g[i - 1][j] > 0) {
-                      setGameOver(true);
+                      setIsRunning(false);
                       return;
                     }
                     gridCopy[i - 1][j] = g[i][j] + 1;
@@ -221,7 +218,7 @@ const App = () => {
                     break;
                   case DIRECTIONS.RIGHT:
                     if (g[i][j + 1] > 0 || j + 1 === gridSize) {
-                      setGameOver(true);
+                      setIsRunning(false);
                       return;
                     }
                     gridCopy[i][j + 1] = g[i][j] + 1;
@@ -231,11 +228,11 @@ const App = () => {
                     break;
                   case DIRECTIONS.DOWN:
                     if (i + 1 > gridSize - 1) {
-                      setGameOver(true);
+                      setIsRunning(false);
                       return;
                     }
                     if (g[i + 1][j] > 0) {
-                      setGameOver(true);
+                      setIsRunning(false);
                       return;
                     }
                     gridCopy[i + 1][j] = g[i][j] + 1;
@@ -250,6 +247,8 @@ const App = () => {
             }
           }
 
+          //Subtract all snake values by 1, which removes the tail and makes
+          //the snake size consistent
           for (let i = 0; i < gridSize; i++)
             for (let j = 0; j < gridSize; j++) {
               if (gridCopy[i][j] > 0) gridCopy[i][j] = gridCopy[i][j] - 1;
@@ -263,20 +262,17 @@ const App = () => {
     DIRECTIONS.RIGHT,
     DIRECTIONS.UP,
     eatFood,
-    gameOver,
+    isRunning,
     snakeSpeed,
   ]);
 
+  //Stop the move interval when game is over
   useEffect(() => {
-    setStartingGrid();
-  }, [setStartingGrid]);
-
-  useEffect(() => {
-    if (gameOver) clearInterval(moveInterval.current);
-  }, [gameOver]);
+    if (!isRunning) clearInterval(moveInterval.current);
+  }, [isRunning]);
 
   const restartGame = () => {
-    setGameOver(false);
+    setIsRunning(true);
     setStartingGrid();
     setScoreState(0);
     currentDirection.current = DIRECTIONS.RIGHT;
@@ -293,28 +289,37 @@ const App = () => {
       <div className="difficulty-picker">
         <h3
           className={`difficulty-item ${
-            snakeSpeed === DIFFICULY.EASY ? "selected" : ""
+            snakeSpeed === DIFFICULY.NORMAL ? "selected" : ""
           }`}
-          onClick={() => setSnakeSpeed(DIFFICULY.EASY)}
+          onClick={() => {
+            setSnakeSpeed(DIFFICULY.NORMAL);
+            restartGame();
+          }}
         >
-          EASY
+          NORMAL
         </h3>
         <h3
           className={`difficulty-item ${
-            snakeSpeed === DIFFICULY.MEDIUM ? "selected" : ""
+            snakeSpeed === DIFFICULY.HARD ? "selected" : ""
           }`}
-          onClick={() => setSnakeSpeed(DIFFICULY.MEDIUM)}
+          onClick={() => {
+            setSnakeSpeed(DIFFICULY.HARD);
+            restartGame();
+          }}
         >
-          MEDIUM
+          HARD
         </h3>
         <h3
           c
           className={`difficulty-item ${
-            snakeSpeed === DIFFICULY.HARD ? "selected" : ""
+            snakeSpeed === DIFFICULY.BORBAS ? "selected" : ""
           }`}
-          onClick={() => setSnakeSpeed(DIFFICULY.HARD)}
+          onClick={() => {
+            setSnakeSpeed(DIFFICULY.BORBAS);
+            restartGame();
+          }}
         >
-          HARD
+          BORBAS
         </h3>
       </div>
     );
@@ -322,39 +327,32 @@ const App = () => {
 
   return (
     <div className="main">
-      <div className="asd">
+      <div className="content">
         <h3>SCORE: {score.current}</h3>
         <div className="grid-container">
-          <div className="grid" style={{ opacity: gameOver ? 0.5 : 1 }}>
-            {grid.map((row, i) =>
-              row.map((col, j) => (
-                <div key={`${i}.${j}`} className={getClass(grid[i][j])}>
-                  {grid[i][j] === -1 &&
-                    (snakeSpeed === DIFFICULY.HARD ? (
-                      <img className="tractor" src={tractor} alt="" />
-                    ) : (
-                      <span
-                        className="emoji"
-                        aria-label="a rocket blasting off"
-                        role="img"
-                      >
-                        🍎
-                      </span>
-                    ))}
-                </div>
-              ))
-            )}
-          </div>
+          {isRunning ? (
+            <div className="grid">
+              {grid.map((row, i) =>
+                row.map((col, j) => (
+                  <div key={`${i}.${j}`} className={getClass(grid[i][j])}>
+                    {grid[i][j] === -1 &&
+                      (snakeSpeed === DIFFICULY.BORBAS ? (
+                        <img className="tractor" src={tractor} alt="" />
+                      ) : (
+                        <img className="apple" src={apple} alt="" />
+                      ))}
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="modal">
+              <h1>~ SNAKE ~</h1>
+              <h2 className="play-again">DIFFICULTY:</h2>
+              {difficultyPicker()}
+            </div>
+          )}
         </div>
-        {gameOver && (
-          <div className="game-over">
-            <h1>GAME OVER</h1>
-            <h2 className="play-again" onClick={restartGame}>
-              PLAY AGAIN
-            </h2>
-            {difficultyPicker()}
-          </div>
-        )}
       </div>
       )
     </div>

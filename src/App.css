@@ -7,6 +7,8 @@
 }
 
 .grid-container {
+  width: 600px;
+  height: 600px;
   border: solid 3px white;
   position: relative;
 }
@@ -39,6 +41,10 @@
   max-width: 100%;
 }
 
+.apple {
+  max-width: 90%;
+}
+
 h1,
 h3 {
   color: white;
@@ -48,26 +54,28 @@ h3 {
   align-self: flex-end;
 }
 
-.asd {
+.content {
   display: flex;
   flex-direction: column;
 }
 
-.game-over {
+.modal {
+  width: 350px;
+  padding: 20px;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translateX(-50%) translateY(-50%);
   text-align: center;
+  background: black;
 }
 
 .play-again {
-  cursor: pointer;
   color: white;
+  margin-bottom: 0;
 }
 
 .difficulty-picker {
-  width: 250px;
   display: flex;
   justify-content: space-between;
   align-items: center;
