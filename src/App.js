@@ -30,10 +30,8 @@ const App = () => {
   const [snakeSpeed, setSnakeSpeed] = useState();
 
   //Had to use combination of states and refs cause react
-  const [headStateX, setHeadX] = useState();
-  const [headStateY, setHeadY] = useState();
-  const headX = useRef();
-  const headY = useRef();
+  const [headState, setHead] = useState({ x: 0, y: 0 });
+  const head = useRef(headState);
 
   const [isRunning, setIsRunning] = useState(false);
   const currentDirection = useRef(DIRECTIONS.RIGHT);
@@ -87,16 +85,15 @@ const App = () => {
         gridCopy[headPositionX][headPositionY - 2] = 1;
 
         //Get coordinates for starting food
-        const [foodStartX, foodStartY] = getRandomCoordinates(
+        const [foodPositionX, foodPositionY] = getRandomCoordinates(
           allowedCoordinatesToSpawnFood
         );
 
         //Food will always have a value of -1
-        gridCopy[foodStartX][foodStartY] = -1;
+        gridCopy[foodPositionX][foodPositionY] = -1;
 
         //Keep track of snake's head with a state
-        setHeadX(headPositionX);
-        setHeadY(headPositionY);
+        setHead({ x: headPositionX, y: headPositionY });
       })
     );
   }, [getRandomCoordinates]);
@@ -107,12 +104,8 @@ const App = () => {
 
   //Update refs with state values
   useEffect(() => {
-    headX.current = headStateX;
-  }, [headStateX]);
-
-  useEffect(() => {
-    headY.current = headStateY;
-  }, [headStateY]);
+    head.current = headState;
+  }, [headState]);
 
   useEffect(() => {
     score.current = scoreState;
@@ -159,11 +152,11 @@ const App = () => {
           }
 
         //Generate new food position and place it on the grid
-        const [foodStartX, foodStartY] = getRandomCoordinates(
+        const [foodPositionX, foodPositionY] = getRandomCoordinates(
           allowedCoordinatesToSpawnFood
         );
 
-        gridCopy[foodStartX][foodStartY] = -1;
+        gridCopy[foodPositionX][foodPositionY] = -1;
 
         //Increase snake's size by increasing each value in grid thats higher than 0, meaning
         //that's where snake is
@@ -184,7 +177,7 @@ const App = () => {
         return produce(g, (gridCopy) => {
           for (let i = 0; i < gridSize; i++) {
             for (let j = 0; j < gridSize; j++) {
-              if (i === headX.current && j === headY.current) {
+              if (i === head.current.x && j === head.current.y) {
                 switch (currentDirection.current) {
                   case DIRECTIONS.LEFT:
                     //If snake hits the wall anounce game over
@@ -199,8 +192,7 @@ const App = () => {
                     //food is there and eatFood fn is called
                     if (g[i][j - 1] === -1) eatFood();
                     //Update head state with new head position
-                    setHeadX(i);
-                    setHeadY(j - 1);
+                    setHead({ x: i, y: j - 1 });
                     break;
                   case DIRECTIONS.UP:
                     if (i - 1 < 0) {
@@ -213,8 +205,7 @@ const App = () => {
                     }
                     gridCopy[i - 1][j] = g[i][j] + 1;
                     if (g[i - 1][j] === -1) eatFood();
-                    setHeadX(i - 1);
-                    setHeadY(j);
+                    setHead({ x: i - 1, y: j });
                     break;
                   case DIRECTIONS.RIGHT:
                     if (g[i][j + 1] > 0 || j + 1 === gridSize) {
@@ -223,8 +214,7 @@ const App = () => {
                     }
                     gridCopy[i][j + 1] = g[i][j] + 1;
                     if (g[i][j + 1] === -1) eatFood();
-                    setHeadX(i);
-                    setHeadY(j + 1);
+                    setHead({ x: i, y: j + 1 });
                     break;
                   case DIRECTIONS.DOWN:
                     if (i + 1 > gridSize - 1) {
@@ -237,8 +227,7 @@ const App = () => {
                     }
                     gridCopy[i + 1][j] = g[i][j] + 1;
                     if (g[i + 1][j] === -1) eatFood();
-                    setHeadX(i + 1);
-                    setHeadY(j);
+                    setHead({ x: i + 1, y: j });
                     break;
                   default:
                     break;
@@ -310,7 +299,6 @@ const App = () => {
           HARD
         </h3>
         <h3
-          c
           className={`difficulty-item ${
             snakeSpeed === DIFFICULY.BORBAS ? "selected" : ""
           }`}
