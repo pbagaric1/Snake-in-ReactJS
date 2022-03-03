@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import "./App.css";
 import { produce } from "immer";
 import tractor from "./tractor.png";
-import apple from "./images.jpg";
+import apple from "./apple.jpg";
 
 const App = () => {
   //Set directions related to keyboard codes
@@ -15,9 +15,9 @@ const App = () => {
 
   //Difficulty is time for move interval in miliseconds
   const DIFFICULY = {
-    NORMAL: 150,
-    HARD: 100,
-    BORBAS: 50,
+    EASY: 150,
+    NORMAL: 100,
+    HARD: 50,
   };
 
   const gridSize = 20;
@@ -41,7 +41,7 @@ const App = () => {
 
   const moveInterval = useRef();
 
-  //Fn that takes a 2d array and gets a random coordinate from it in [x,y] format
+  //Method that takes a 2d array and gets a random coordinate from it in [x,y] format
   const getRandomCoordinates = useCallback((allowedCoordinates) => {
     return allowedCoordinates[
       Math.floor(Math.random() * allowedCoordinates.length)
@@ -122,7 +122,7 @@ const App = () => {
     [DIRECTIONS.DOWN, DIRECTIONS.LEFT, DIRECTIONS.RIGHT, DIRECTIONS.UP]
   );
 
-  //Fn that triggers every time we use the keyboard arrows for changing the direction
+  //Method that triggers every time we use the keyboard arrows for changing the direction
   const changeDirection = useCallback(
     (event) => {
       if (
@@ -189,7 +189,7 @@ const App = () => {
                     //meaning that square will become new head
                     gridCopy[i][j - 1] = g[i][j] + 1;
                     //If the next square in the direction snake is moving has a value of -1 that means
-                    //food is there and eatFood fn is called
+                    //food is there and eatFood method is called
                     if (g[i][j - 1] === -1) eatFood();
                     //Update head state with new head position
                     setHead({ x: i, y: j - 1 });
@@ -278,6 +278,17 @@ const App = () => {
       <div className="difficulty-picker">
         <h3
           className={`difficulty-item ${
+            snakeSpeed === DIFFICULY.EASY ? "selected" : ""
+          }`}
+          onClick={() => {
+            setSnakeSpeed(DIFFICULY.EASY);
+            restartGame();
+          }}
+        >
+          EASY
+        </h3>
+        <h3
+          className={`difficulty-item ${
             snakeSpeed === DIFFICULY.NORMAL ? "selected" : ""
           }`}
           onClick={() => {
@@ -297,17 +308,6 @@ const App = () => {
           }}
         >
           HARD
-        </h3>
-        <h3
-          className={`difficulty-item ${
-            snakeSpeed === DIFFICULY.BORBAS ? "selected" : ""
-          }`}
-          onClick={() => {
-            setSnakeSpeed(DIFFICULY.BORBAS);
-            restartGame();
-          }}
-        >
-          BORBAS
         </h3>
       </div>
     );
